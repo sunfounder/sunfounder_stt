@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sunfounder-stt"
+version = "1.0.0"
+description = "Push-to-talk speech-to-text with multiple backends (whisper.cpp, faster-whisper, OpenAI)"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "SunFounder"},
+]
+keywords = ["speech-to-text", "stt", "whisper", "voice", "asr"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+dependencies = [
+    "requests>=2.25",
+]
+
+[project.optional-dependencies]
+local_standard = ["pywhispercpp>=0.1"]
+local_fast = ["faster-whisper>=1.0"]
+all = [
+    "pywhispercpp>=0.1",
+    "faster-whisper>=1.0",
+]
+dev = ["pytest>=7"]
+
+[project.urls]
+Repository = "https://github.com/sunfounder/uno-q-ai-robot-plus"
+
+[tool.setuptools]
+packages = ["sunfounder_stt"]
+package-dir = {"sunfounder_stt" = "."}
