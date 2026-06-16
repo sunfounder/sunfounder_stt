@@ -1,6 +1,0 @@
-services:
-  sunfounder_stt:
-    build:
-      context: ../..
-      dockerfile: python-libraries/sunfounder_stt/Dockerfile
-    image: sunfounder_stt:latest
