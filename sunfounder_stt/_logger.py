@@ -1,3 +1,5 @@
+"""Logging utilities — ANSI-coloured console formatter and rotating-file logger."""
+
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -8,8 +10,12 @@ ERROR = logging.ERROR
 CRITICAL = logging.CRITICAL
 
 class ColoredFormatter(logging.Formatter):
-    """ Colored formatter for logging """
-        
+    """ANSI-coloured log formatter.
+
+    Wraps the level name in terminal colour escape sequences:
+    DEBUG=Blue, INFO=Green, WARNING=Yellow, ERROR=Red, CRITICAL=Purple.
+    """
+
     COLOR_CODES = {
         'DEBUG': '\033[94m',    # Blue
         'INFO': '\033[92m',     # Green
@@ -20,6 +26,14 @@ class ColoredFormatter(logging.Formatter):
     RESET_CODE = '\033[0m'     # Reset
 
     def format(self, record):
+        """Format a log record with ANSI colour codes.
+
+        Args:
+            record: :class:`logging.LogRecord` to format.
+
+        Returns:
+            str: Formatted log message with colour-annotated level name.
+        """
         levelname = record.levelname
         color_code = self.COLOR_CODES.get(levelname, '')
         reset_code = self.RESET_CODE if color_code else ''
@@ -28,14 +42,14 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record)
 
 class Logger(logging.Logger):
-    """ Logger class
-    
+    """Logger with console (coloured) and optional rotating-file output.
+
     Args:
-        name (str, optional): Logger name, default is 'logger'
-        level (int, optional): Log level, default is 0
-        file (str, optional): Log file path, default is None, no log file will be created
-        maxBytes (int, optional): Maximum log file size, default is 10MB
-        backupCount (int, optional): Maximum number of backup log files, default is 10
+        name: Logger name, default ``"logger"``.
+        level: Log level, default :data:`logging.INFO`.
+        file: Log file path. ``None`` disables file logging (default).
+        maxBytes: Max log file size in bytes before rotation (default 10 MB).
+        backupCount: Number of backup files to keep (default 10).
     """
     def __init__(self, name='logger', level=logging.INFO, file:str=None, maxBytes=10*1024*1024, backupCount=10):
         self.log_path = file
@@ -57,10 +71,14 @@ class Logger(logging.Logger):
             self.addHandler(file_handler)
 
     def setLevel(self, level: [int, str]):
-        """ Set log level
+        """Set log level on the logger and all its handlers.
 
         Args:
-            level (int or str): Log level
+            level: Log level as int (e.g. ``logging.DEBUG``) or str
+                   (e.g. ``"DEBUG"``) — case-insensitive.
+
+        Returns:
+            None
         """
         if isinstance(level, str):
             level = level.upper()

@@ -18,6 +18,11 @@ except OSError:
 
 
 def is_available() -> bool:
+    """Check if ALSA direct capture is available.
+
+    Returns:
+        bool: ``True`` if ``libasound.so.2`` was loaded successfully.
+    """
     return _LIBASOUND is not None
 
 

@@ -50,6 +50,12 @@ class WhisperSTT(STTBase):
     # ---- public ----
 
     def _transcribe(self):
+        """Run transcription using the configured engine.
+
+        Lazy-initializes the engine on first call. Routes to online or local
+        transcription depending on ``self._type``. Runs in a background thread
+        (spawned by :meth:`STTBase.stop_listening`).
+        """
         if self._engine is None:
             self._engine = self._init_engine()
 
@@ -67,6 +73,17 @@ class WhisperSTT(STTBase):
     # ---- engine init ----
 
     def _init_engine(self):
+        """Initialize the transcription engine based on ``self._type``.
+
+        - ``"local_standard"``: whisper.cpp GGML via ``pywhispercpp``
+        - ``"local_fast"``: faster-whisper CTranslate2 (int8 CPU)
+        - ``"online"``: stateless — returns ``None``
+
+        Suppresses stderr during GGML model load to hide architecture dump.
+
+        Returns:
+            Engine instance or ``None`` for online mode.
+        """
         if self._type == "local_standard":
             import os as _os
             from pywhispercpp.model import Model
@@ -91,6 +108,15 @@ class WhisperSTT(STTBase):
     # ---- local (ggml / ct2) ----
 
     def _transcribe_local(self, audio):
+        """Transcribe PCM audio using a local engine (whisper.cpp or faster-whisper).
+
+        Converts raw PCM to WAV, then calls the engine's transcription method.
+        For ``local_standard``, writes to a temp file (whisper.cpp reads files).
+        For ``local_fast``, passes an in-memory ``BytesIO`` buffer.
+
+        Args:
+            audio: Raw S16_LE PCM bytes to transcribe.
+        """
         wav_bytes = self._pcm_to_wav(audio)
         if self._type == "local_standard":
             tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
@@ -110,6 +136,14 @@ class WhisperSTT(STTBase):
     # ---- online ----
 
     def _transcribe_online(self, audio):
+        """Transcribe PCM audio via OpenAI Whisper API.
+
+        Converts raw PCM to WAV and POSTs it to ``api.openai.com/v1/audio/transcriptions``.
+        Sets ``self._result = ""`` on any request error.
+
+        Args:
+            audio: Raw S16_LE PCM bytes to transcribe.
+        """
         wav_bytes = self._pcm_to_wav(audio)
         try:
             resp = requests.post(

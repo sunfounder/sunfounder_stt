@@ -13,6 +13,14 @@ import wave
 
 
 def _dbg(msg: str) -> None:
+    """Print a debug message to stderr with ``[STT]`` prefix.
+
+    Args:
+        msg: Debug message string.
+
+    Returns:
+        None
+    """
     print(f"[STT] {msg}", file=sys.stderr, flush=True)
 
 
@@ -27,6 +35,13 @@ class STTBase:
     """
 
     def __init__(self, samplerate=16000, language="en"):
+        """Initialize STT base.
+
+        Args:
+            samplerate: Audio sample rate in Hz (default 16000).
+            language: Language code passed to the transcription engine
+                      (e.g. ``"zh"``, ``"en"``).
+        """
         self.samplerate = samplerate
         self.language = language
         self._frames = []           # accumulated PCM frame blocks
@@ -39,7 +54,15 @@ class STTBase:
     # ---- public API ----
 
     def start_listening(self):
-        """Spawn arecord and begin capturing raw PCM."""
+        """Spawn arecord and begin capturing raw PCM.
+
+        Launches ``arecord -D hw:0,2`` to capture S16_LE mono audio at the
+        configured sample rate. A background reader thread accumulates PCM
+        frames into ``self._frames``.
+
+        Returns:
+            None
+        """
         if self._recording:
             return
         self._frames = []
@@ -66,7 +89,16 @@ class STTBase:
         self._reader_thread.start()
 
     def stop_listening(self):
-        """Terminate arecord and start transcription."""
+        """Terminate arecord, save WAV, and start transcription.
+
+        Kills the ``arecord`` process, joins the reader thread, concatenates
+        accumulated PCM frames, saves a WAV file to
+        ``/app/audio_output/stt_last.wav``, and spawns :meth:`_transcribe` in
+        a background thread.
+
+        Returns:
+            None
+        """
         if not self._recording:
             return
         self._recording = False
@@ -97,7 +129,16 @@ class STTBase:
         threading.Thread(target=self._transcribe, daemon=True).start()
 
     def get_result(self, timeout=30) -> str:
-        """Block until transcription completes and return the result."""
+        """Block until transcription completes and return the result.
+
+        Polls :meth:`is_ready` at 50 ms intervals.
+
+        Args:
+            timeout: Maximum number of seconds to wait (default 30).
+
+        Returns:
+            str: Transcribed text, or ``""`` on timeout / empty audio.
+        """
         deadline = time.time() + timeout
         while not self._ready:
             if time.time() > deadline:
@@ -110,11 +151,23 @@ class STTBase:
         return result or ""
 
     def is_ready(self) -> bool:
-        """Has a transcription result become available?"""
+        """Check if a transcription result is available.
+
+        Returns:
+            bool: ``True`` if transcription has completed and result can be read
+                  via :meth:`get_result`.
+        """
         return self._ready
 
     def reset(self):
-        """Reset to idle -- discard pending results."""
+        """Reset to idle — stop recording and discard pending results.
+
+        If currently recording, stops capture (terminates arecord, waits for
+        reader thread). Clears accumulated audio frames and transcription state.
+
+        Returns:
+            None
+        """
         if self._recording:
             self.stop_listening()
         self._frames = []
@@ -122,17 +175,37 @@ class STTBase:
         self._ready = False
 
     def set_wake_words(self, words):
+        """No-op kept for API compatibility with wake-word based STT engines.
+
+        Args:
+            words: Ignored.
+        """
         pass  # no-op for API compatibility
 
     # ---- internal ----
 
     def _transcribe(self):
+        """Run the engine-specific transcription.
+
+        Must be implemented by subclasses. Called in a background thread
+        after :meth:`stop_listening` converts PCM to WAV.
+
+        Raises:
+            NotImplementedError: If the subclass does not override this method.
+        """
         raise NotImplementedError
 
     # ---- helpers ----
 
     def _pcm_to_wav(self, pcm: bytes) -> bytes:
-        """Convert raw PCM (S16_LE mono) to WAV bytes in memory."""
+        """Convert raw PCM (S16_LE mono) to WAV bytes in memory.
+
+        Args:
+            pcm: Raw S16_LE mono PCM audio bytes.
+
+        Returns:
+            bytes: Complete WAV file with RIFF header.
+        """
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wf:
             wf.setnchannels(1)

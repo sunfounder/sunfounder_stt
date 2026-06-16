@@ -19,6 +19,8 @@ PA_SAMPLE_S16LE = 3
 
 
 class _SampleSpec(ctypes.Structure):
+    """Ctypes mirror of PulseAudio ``pa_sample_spec`` — format, rate, channels."""
+
     _fields_ = [
         ("format", ctypes.c_int),
         ("rate", ctypes.c_uint32),
@@ -27,6 +29,11 @@ class _SampleSpec(ctypes.Structure):
 
 
 def _setup_signatures():
+    """Configure libpulse-simple ctypes argument and return types.
+
+    Returns:
+        None
+    """
     lib = _LIB
     lib.pa_simple_new.argtypes = [
         ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int,
@@ -55,6 +62,14 @@ class PulseAudioCapture:
     Provides a context-manager interface that reads from the PulseAudio
     default source and invokes a callback for each block of audio data,
     matching the pattern used by sounddevice.RawInputStream.
+
+    Args:
+        samplerate: Sample rate in Hz (default 16000).
+        blocksize: Frames per read (default 1024).
+        channels: Number of audio channels (default 1).
+        dtype: Sample format string, e.g. ``"int16"`` (default).
+        callback: ``callable(bytes, frames, time, status)`` invoked for each
+                  audio block. Signature matches sounddevice callback.
     """
 
     def __init__(self, samplerate=16000, blocksize=1024, channels=1,
