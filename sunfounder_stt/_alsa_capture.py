@@ -6,7 +6,6 @@ but the host's sound server socket is not available.
 """
 
 import ctypes as _ct
-import threading
 
 
 _LIBASOUND = None
